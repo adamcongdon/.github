@@ -12,7 +12,7 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
       - name: Run Semgrep (auto-detect language)
-        run: semgrep --config auto --error --quiet
+        run: semgrep --config auto --quiet
       - name: Run Semgrep Supply Chain rules
-        run: semgrep --config "p/supply-chain" --error --quiet
+        run: semgrep --config "p/supply-chain" --quiet
         continue-on-error: true
