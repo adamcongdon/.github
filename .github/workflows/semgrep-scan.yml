@@ -1,0 +1,18 @@
+name: Semgrep SAST Scan
+
+on:
+  workflow_call:
+
+jobs:
+  semgrep:
+    name: SAST Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Semgrep
+        run: pip install semgrep
+      - name: Run Semgrep (auto-detect language)
+        run: semgrep --config auto --error --quiet
+      - name: Run Semgrep Supply Chain rules
+        run: semgrep --config "p/supply-chain" --error --quiet
+        continue-on-error: true
