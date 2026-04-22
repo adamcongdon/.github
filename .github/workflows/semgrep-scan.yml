@@ -18,8 +18,7 @@ jobs:
       - name: Install Semgrep
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip >/dev/null 2>&1 || true
-          pip install semgrep --break-system-packages 2>/dev/null || pip install semgrep
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          sudo pip install semgrep --break-system-packages 2>/dev/null || sudo pip install semgrep
       - name: Run Semgrep (auto-detect language)
         run: semgrep --config auto --quiet
       - name: Run Semgrep Supply Chain rules
