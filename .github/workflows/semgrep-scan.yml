@@ -2,11 +2,17 @@ name: Semgrep SAST Scan
 
 on:
   workflow_call:
+    inputs:
+      runner:
+        description: 'Runner label (e.g. ubuntu-latest or self-hosted)'
+        required: false
+        type: string
+        default: 'self-hosted'
 
 jobs:
   semgrep:
     name: SAST Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Semgrep
