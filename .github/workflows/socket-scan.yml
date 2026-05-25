@@ -1,0 +1,46 @@
+name: Socket Supply-Chain Scan
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: 'Runner label (e.g. ubuntu-latest or self-hosted)'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      fail-on-alert:
+        description: 'Fail the job if Socket reports any alert at or above the threshold'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      SOCKET_SECURITY_API_KEY:
+        description: 'Socket.dev API key — create at https://socket.dev/settings/api-tokens'
+        required: true
+
+jobs:
+  socket:
+    name: Socket Scan
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Socket CLI
+        run: pip install --upgrade socket-security
+
+      - name: Run Socket scan
+        env:
+          SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
+        run: |
+          if [ "${{ inputs.fail-on-alert }}" = "true" ]; then
+            socketcli --enable-all-alerts --repo "${GITHUB_REPOSITORY}" --branch "${GITHUB_REF_NAME}"
+          else
+            socketcli --repo "${GITHUB_REPOSITORY}" --branch "${GITHUB_REF_NAME}" || true
+          fi
