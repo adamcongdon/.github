@@ -1,0 +1,18 @@
+# Example caller workflow
+# Copy this file into any repo that should use Dependabot auto-merge.
+# Place it at: .github/workflows/dependabot-auto-merge.yml
+
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    uses: adamcongdon/.github/.github/workflows/dependabot-auto-merge.yml@main
+    secrets: inherit
