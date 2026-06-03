@@ -1,0 +1,38 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Socket.dev Security Scan
+        id: socket
+        uses: SocketDev/action@v1
+        with:
+          api-token: ${{ secrets.SOCKET_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for Dependabot PRs
+        if: |
+          steps.metadata.outputs.update-type != 'version-update:semver-major' &&
+          steps.socket.outputs.scan-passed == 'true'
+        run: |
+          gh pr comment "$PR_URL" --body "✅ Auto-merge enabled by workflow. Will merge with squash once all status checks pass.\n\n- Update type: \`${{ steps.metadata.outputs.update-type }}\`\n- Socket scan: Passed"
+          gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
