@@ -1,0 +1,7 @@
+{
+  "name": "Claude Code (@mention handler)",
+  "description": "Reacts to @claude mentions in issues, issue comments, PR review comments, and PR reviews. Claude reads the request, navigates the repo, and replies (or makes changes via tool use). Requires CLAUDE_CODE_OAUTH_TOKEN.",
+  "iconName": "octicon mention",
+  "categories": ["Automation", "Code Quality"],
+  "filePatterns": []
+}
