@@ -1,0 +1,7 @@
+{
+  "name": "Claude Code Review",
+  "description": "Auto-runs Claude Code review on every pull request (open/sync/reopen/ready_for_review) via the code-review plugin. Posts inline comments with concerns and suggestions. Requires CLAUDE_CODE_OAUTH_TOKEN. Skips dependabot PRs.",
+  "iconName": "octicon git-pull-request",
+  "categories": ["Code Quality", "Automation"],
+  "filePatterns": []
+}

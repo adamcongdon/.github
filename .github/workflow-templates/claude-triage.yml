@@ -1,0 +1,56 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+
+    steps:
+      # Post an @claude triage request as a comment using a PAT (not GITHUB_TOKEN)
+      # so the resulting issue_comment event actually fires and triggers claude.yml.
+      # GITHUB_TOKEN-authored comments do NOT trigger other workflows by design.
+      - name: Post @claude triage request
+        env:
+          GH_TOKEN: ${{ secrets.TRIAGE_PAT }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          BODY=$(cat <<'EOF'
+          @claude Please triage this issue.
+
+          Do ALL of the following:
+
+          1. Apply labels via gh CLI (pre-installed on ubuntu-latest):
+             ```bash
+             gh issue edit "$ISSUE_NUMBER" --add-label "type-label,priority-label,component-label"
+             ```
+             Use only these labels (create any missing ones if needed):
+             - **Type**: bug, enhancement, question, documentation, wontfix
+             - **Priority**: P0-critical, P1-high, P2-medium, P3-low
+             - **Component**: core, ui, api, build, ci, docs
+             Apply 1 type + 1 priority + 1 component label.
+
+          2. Post a triage comment with:
+             - **Type**: bug / enhancement / question / other
+             - **Priority**: P0-P3 + one-sentence justification
+             - **Component**: affected subsystem
+             - **Root cause hypothesis**: search the codebase, name the specific file and line most likely responsible
+             - **Suggested fix**: concrete next step, not vague advice
+             - **Effort**: XS / S / M / L / XL
+
+          3. If the issue is a bug, also note whether reproduction steps are present; if not, ask for them.
+
+          Be concise.
+          EOF
+          )
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
+          echo "Triage comment posted on issue #$ISSUE_NUMBER"
