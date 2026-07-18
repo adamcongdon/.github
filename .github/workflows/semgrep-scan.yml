@@ -9,18 +9,28 @@ on:
         type: string
         default: 'ubuntu-latest'
 
+permissions: {}
+
+# Pinned image: semgrep/semgrep:1.97.0 (Dependabot/Renovate can bump the digest).
+# Replaces deprecated returntocorp/semgrep:latest. --config auto removed (it phoned
+# repo metadata home to the Semgrep registry); explicit rulesets + --metrics off instead.
+env:
+  SEMGREP_IMAGE: semgrep/semgrep@sha256:a265d09a9ca712e6624aca09056304ce4314a695b7028d65c041dd53fd44c700
+
 jobs:
   semgrep:
     name: SAST Scan
     runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
       - name: Run Semgrep via Docker
         run: |
-          docker run --rm -v "${GITHUB_WORKSPACE}:/src" returntocorp/semgrep:latest \
-            semgrep --config auto --quiet /src
+          docker run --rm -v "${GITHUB_WORKSPACE}:/src" "${SEMGREP_IMAGE}" \
+            semgrep --config p/default --config p/secrets --metrics off --quiet /src
       - name: Run Semgrep Supply Chain rules
         run: |
-          docker run --rm -v "${GITHUB_WORKSPACE}:/src" returntocorp/semgrep:latest \
-            semgrep --config "p/supply-chain" --quiet /src
+          docker run --rm -v "${GITHUB_WORKSPACE}:/src" "${SEMGREP_IMAGE}" \
+            semgrep --config p/supply-chain --metrics off --quiet /src
         continue-on-error: true
