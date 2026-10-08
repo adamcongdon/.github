@@ -34,11 +34,16 @@ jobs:
         || (inputs.scan-mode != 'full' && github.event_name == 'push' && github.event.size)
         || 0 }}
     steps:
+      - name: Compute checkout depth
+        id: depth
+        run: |
+          # One extra commit so the oldest scanned commit has a parent to
+          # diff against; 0 = full history.
+          if [ "$SCAN_COMMITS" = "0" ]; then echo "fetch-depth=0" >> "$GITHUB_OUTPUT"
+          else echo "fetch-depth=$((SCAN_COMMITS + 1))" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
-          # One extra commit so the oldest scanned commit has a parent to diff
-          # against; fetch-depth 0 = full history.
-          fetch-depth: ${{ env.SCAN_COMMITS == '0' && 0 || fromJSON(env.SCAN_COMMITS) + 1 }}
+          fetch-depth: ${{ steps.depth.outputs.fetch-depth }}
           # Scan the PR head itself, not the synthetic merge commit.
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
       - name: Install and run Gitleaks
