@@ -8,6 +8,14 @@ on:
         required: false
         type: string
         default: 'ubuntu-latest'
+      scan-mode:
+        description: >-
+          auto: pull_request and push events scan only the commits they add
+          (shallow checkout); every other event (schedule, workflow_dispatch,
+          workflow_run, ...) scans full history. full: always scan full history.
+        required: false
+        type: string
+        default: 'auto'
 
 permissions: {}
 
@@ -17,12 +25,30 @@ jobs:
     runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
+    env:
+      # Commits to scan; 0 means full history. A PR scans its own commits
+      # (github.event.pull_request.commits); a push scans the pushed range
+      # (github.event.size). Anything else, or scan-mode=full, scans everything.
+      SCAN_COMMITS: >-
+        ${{ (inputs.scan-mode != 'full' && github.event_name == 'pull_request' && github.event.pull_request.commits)
+        || (inputs.scan-mode != 'full' && github.event_name == 'push' && github.event.size)
+        || 0 }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
-          fetch-depth: 0
+          # One extra commit so the oldest scanned commit has a parent to diff
+          # against; fetch-depth 0 = full history.
+          fetch-depth: ${{ env.SCAN_COMMITS == '0' && 0 || fromJSON(env.SCAN_COMMITS) + 1 }}
+          # Scan the PR head itself, not the synthetic merge commit.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
       - name: Install and run Gitleaks
         run: |
           GITLEAKS_VERSION="8.24.3"
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz -C /tmp
-          /tmp/gitleaks detect --source . --redact -v --exit-code 2
+          if [ "$SCAN_COMMITS" = "0" ]; then
+            echo "Scanning full history"
+            /tmp/gitleaks detect --source . --redact -v --exit-code 2
+          else
+            echo "Scanning the newest $SCAN_COMMITS commit(s)"
+            /tmp/gitleaks detect --source . --redact -v --exit-code 2 --log-opts="-n $SCAN_COMMITS"
+          fi
