@@ -26,21 +26,33 @@ jobs:
     permissions:
       contents: read
     env:
-      # Commits to scan; 0 means full history. A PR scans its own commits
-      # (github.event.pull_request.commits); a push scans the pushed range
-      # (github.event.size). Anything else, or scan-mode=full, scans everything.
-      SCAN_COMMITS: >-
-        ${{ (inputs.scan-mode != 'full' && github.event_name == 'pull_request' && github.event.pull_request.commits)
-        || (inputs.scan-mode != 'full' && github.event_name == 'push' && github.event.size)
-        || 0 }}
+      SCAN_MODE: ${{ inputs.scan-mode }}
+      EVENT_NAME: ${{ github.event_name }}
+      PR_COMMITS: ${{ github.event.pull_request.commits }}
+      PUSH_COMMIT_IDS: ${{ toJSON(github.event.commits.*.id) }}
     steps:
-      - name: Compute checkout depth
+      - name: Compute scan range
         id: depth
         run: |
+          # SCAN_COMMITS = how many of the newest commits to scan; 0 = full
+          # history. A pull_request scans its own commits; a push scans the
+          # commits in the push payload (GitHub lists at most 20, so 0 or 20+
+          # falls back to full history). Any other event, or scan-mode=full,
+          # scans everything.
+          n=0
+          if [ "$SCAN_MODE" != "full" ]; then
+            case "$EVENT_NAME" in
+              pull_request) n="$PR_COMMITS" ;;
+              push) n=$(printf '%s' "$PUSH_COMMIT_IDS" | grep -oE '[0-9a-f]{40}' | wc -l) ;;
+            esac
+          fi
+          n=$((n + 0))
+          if [ "$n" -ge 20 ] && [ "$EVENT_NAME" = "push" ]; then n=0; fi
+          echo "SCAN_COMMITS=$n" >> "$GITHUB_ENV"
           # One extra commit so the oldest scanned commit has a parent to
-          # diff against; 0 = full history.
-          if [ "$SCAN_COMMITS" = "0" ]; then echo "fetch-depth=0" >> "$GITHUB_OUTPUT"
-          else echo "fetch-depth=$((SCAN_COMMITS + 1))" >> "$GITHUB_OUTPUT"; fi
+          # diff against; fetch-depth 0 = full history.
+          if [ "$n" -eq 0 ]; then echo "fetch-depth=0" >> "$GITHUB_OUTPUT"
+          else echo "fetch-depth=$((n + 1))" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: ${{ steps.depth.outputs.fetch-depth }}
